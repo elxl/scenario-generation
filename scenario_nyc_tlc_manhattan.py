@@ -1,4 +1,5 @@
 import argparse
+import pickle
 import pandas as pd
 import geopandas as gpd
 import osmnx as ox
@@ -63,7 +64,7 @@ def process_trip_arc(data_path, zone_path, date, directory):
     trips = trips_day_nodes[['origin_node','origin_lon','origin_lat', 'destination_node','dest_lon','dest_lat','request_time']].reset_index(drop=True)
     
     trips.to_csv(directory + '/requests.csv', index=False)
-    print(f"Trip data processed and saved to {directory}/requests.csv")
+    print(f"Trip data processed and saved to {directory}requests.csv")
 
 def process_trip_zone(data_path, zone_path, date, directory):
     """Process trip data and generate map network for zone-based granularity."""
@@ -86,29 +87,29 @@ def process_trip_zone(data_path, zone_path, date, directory):
     geometry = manhattan_zone.union_all()
     G = ox.graph_from_polygon(geometry, network_type="drive")
     centroids = manhattan_zone['centroid'].to_list()
+    ids = manhattan_zone['LocationID'].to_list()
     centroid_nodes = ox.distance.nearest_nodes(G, X=[c.x for c in centroids], Y=[c.y for c in centroids])
 
     # Compute pairewise drive time using Dijkstra
     G = ox.add_edge_speeds(G)
     G = ox.add_edge_travel_times(G)
-    n = len(centroid_nodes)
-    drive_time_matrix = pd.DataFrame(index=range(n), columns=range(n))
-
-    for i in range(n):
-        for j in range(n):
+    drive_time_dict = dict()
+    for i, node1 in zip(ids, centroid_nodes):
+        for j, node2 in zip(ids, centroid_nodes):
             if i == j:
-                drive_time_matrix.iloc[i, j] = 0
+                drive_time_dict[(i,j)] = 0
             else:
                 try:
-                    time = nx.shortest_path_length(G,
-                                                source=centroid_nodes[i],
-                                                target=centroid_nodes[j],
+                    t = nx.shortest_path_length(G,
+                                                source=node1,
+                                                target=node2,
                                                 weight="travel_time")
-                    drive_time_matrix.iloc[i, j] = round(time / 60,2)  # convert to minutes
+                    drive_time_dict[(i, j)] = round(t / 60,2)  # convert to minutes
                 except nx.NetworkXNoPath:
-                    drive_time_matrix.iloc[i, j] = None  # no route
-    drive_time_matrix.to_csv(directory + '/times.csv', index=False)
-    print("Inter-regional drive time matrix saved to {directory}/times.csv")
+                    continue  # no route
+    with open(directory + '/times.pickle', 'wb') as f:
+        pickle.dump(drive_time_dict, f)
+    print(f"Inter-regional drive time matrix saved to {directory}times.pickle")
 
     # Process the trip data within Manhattan area of the specified date
     trips = pd.read_parquet(data_path)
@@ -120,7 +121,7 @@ def process_trip_zone(data_path, zone_path, date, directory):
     trips = trips[['origin_zone', 'destination_zone', 'request_time']].reset_index(drop=True)
 
     trips.to_csv(directory + '/requests.csv', index=False)
-    print(f"Trip data processed and saved to {directory}/requests.csv")
+    print(f"Trip data processed and saved to {directory}requests.csv")
 
 def generate_manhattan(data_path, zone_path, date, directory, granularity):
 
