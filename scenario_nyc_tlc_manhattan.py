@@ -1,10 +1,12 @@
 import argparse
 import pickle
+import random
+import datetime
 import pandas as pd
 import geopandas as gpd
 import osmnx as ox
 import networkx as nx
-from network_generator import create_directory, osmnx_routing_graph, generateMap
+from network_generator import create_directory, osmnx_routing_graph, generateMap, generateVehicles
 
 
 def get_trip_node(merged_nodes, row):
@@ -23,7 +25,7 @@ def get_trip_node(merged_nodes, row):
         'dest_lon'   : dropoff_node['lon']
     }
 
-def process_trip_arc(data_path, zone_path, date, directory):
+def process_trip_arc(data_path, zone_path, date, directory, generate_veh, vehicle_num, vehicle_capacity):
     """Process trip data and generate map network for arc-based granularity."""
     
     # Read the taxi zone data and get the Manhattan zone
@@ -63,10 +65,17 @@ def process_trip_arc(data_path, zone_path, date, directory):
     # Rename and reorder columns
     trips = trips_day_nodes[['origin_node','origin_lon','origin_lat', 'destination_node','dest_lon','dest_lat','request_time']].reset_index(drop=True)
     
-    trips.to_csv(directory + '/requests.csv', index=False)
-    print(f"Trip data processed and saved to {directory}requests.csv")
+    request_directory = directory + "requests/"
+    create_directory(request_directory)
+    trips.to_csv(request_directory + 'requests.csv', index=False)
+    print(f"Trip data processed and saved to {request_directory}requests.csv")
 
-def process_trip_zone(data_path, zone_path, date, directory):
+    # Generate vehicles
+    if generate_veh:
+        generateVehicles(nodes,vehicle_num,vehicle_capacity,directory)
+        print(f"Vehicles generated and saved to {directory}vehicles/vehicles.csv")
+
+def process_trip_zone(data_path, zone_path, date, directory, generate_veh, vehicle_num, vehicle_capacity):
     """Process trip data and generate map network for zone-based granularity."""
 
     # Get Manhattan zone
@@ -107,9 +116,11 @@ def process_trip_zone(data_path, zone_path, date, directory):
                     drive_time_dict[(i, j)] = round(t / 60,2)  # convert to minutes
                 except nx.NetworkXNoPath:
                     continue  # no route
-    with open(directory + '/times.pickle', 'wb') as f:
+    time_directory = directory + "map/"
+    create_directory(time_directory)
+    with open(time_directory + 'times.pickle', 'wb') as f:
         pickle.dump(drive_time_dict, f)
-    print(f"Inter-regional drive time matrix saved to {directory}times.pickle")
+    print(f"Inter-regional drive time matrix saved to {time_directory}times.pickle")
 
     # Process the trip data within Manhattan area of the specified date
     trips = pd.read_parquet(data_path)
@@ -120,24 +131,59 @@ def process_trip_zone(data_path, zone_path, date, directory):
     trips.rename(columns={'PULocationID': 'origin_zone', 'DOLocationID': 'destination_zone'}, inplace=True)
     trips = trips[['origin_zone', 'destination_zone', 'request_time']].reset_index(drop=True)
 
-    trips.to_csv(directory + '/requests.csv', index=False)
-    print(f"Trip data processed and saved to {directory}requests.csv")
+    request_directory = directory + "requests/"
+    create_directory(request_directory)
+    trips.to_csv(request_directory + 'requests.csv', index=False)
+    print(f"Trip data processed and saved to {request_directory}requests.csv")
 
-def generate_manhattan(data_path, zone_path, date, directory, granularity):
+    # Generate vehicles
+    if generate_veh:
+        zones = manhattan_zone[['LocationID']]
+        vehicles = pd.DataFrame()
+        # randomly generate starting points 
+        start_node = random.sample(zones.to_list(), vehicle_num)
+
+        vehicles['zone'] = start_node
+        vehicles['id'] = list(range(1, vehicle_num+1))
+        vehicles['start_time'] = datetime.time(0,0,0)
+        vehicles['capacity'] = vehicle_capacity
+
+        # formatting
+        vehicles = vehicles[['id', 'zone', 'start_time', 'capacity']]
+        vehicle_directory = directory + "vehicles/"
+        create_directory(vehicle_directory)
+        vehicles.to_csv(vehicle_directory+'vehicles.csv',index=False)
+        print(f"Vehicles generated and saved to {vehicle_directory}vehicles.csv")
+
+def generate_manhattan(data_path, zone_path, date, directory, granularity, generate_veh, vehicle_num, vehicle_capacity):
 
     create_directory(directory)
     
     # Process the trip data
     if granularity == 'arc':
-        process_trip_arc(data_path, zone_path, date, directory)
+        process_trip_arc(data_path, zone_path, date, directory, generate_veh, vehicle_num, vehicle_capacity)
     elif granularity == 'zone':
-        process_trip_zone(data_path, zone_path, date, directory)
+        process_trip_zone(data_path, zone_path, date, directory, generate_veh, vehicle_num, vehicle_capacity)
     else:
         raise ValueError("Invalid granularity. Choose 'arc' or 'zone'.")
    
 
 if __name__ == "__main__":
+    random.seed(42)
+
     parser = argparse.ArgumentParser(description='Process trip data for NYC TLC dataset.')
+    parser.add_argument("--generate_veh",
+                        type=int,
+                        default=1,
+                        help="Generate vehicles.")
+    parser.add_argument("--vehicle",
+                        type=int,
+                        default=2000,
+                        help="Number of vehicles to generate.")
+    parser.add_argument("--capacity",
+                        type=int,
+                        default=4,
+                        help="Capacity of each vehicle.")
     parser.add_argument("--data_path",
                         type=str,
                         default="./fhvhv_tripdata_2024-05.parquet",
@@ -161,10 +207,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     # Set the parameters from command line arguments
+    vehicle_num = args.vehicle
+    vehicle_capacity = args.capacity
+    generate_veh = args.generate_veh
     data_path = args.data_path
     zone_path = args.zone_path
     date = args.date
     directory = args.directory
     granularity = args.granularity
 
-    generate_manhattan(data_path, zone_path, date, directory, granularity)
+    generate_manhattan(data_path, zone_path, date, directory, granularity, generate_veh, vehicle_num, vehicle_capacity)

@@ -165,7 +165,7 @@ def generateVehicles(nodes,vehicle_num,vehicle_capacity,main_directory):
     vehicles = vehicles[['id', 'node', 'lat', 'lon', 'start_time', 'capacity']]
     vehicle_directory = main_directory + "vehicles/"
     create_directory(vehicle_directory)
-    vehicles.to_csv(vehicle_directory+'vehicles.csv', header = False)
+    vehicles.to_csv(vehicle_directory+'vehicles.csv', index = False)
 
 def generate_scenario(main_directory, scenario_shapefile, city_center, radius, vehicle_num, vehicle_capacity):
     """Main function to generate the scenario map and vehicles."""
@@ -182,6 +182,8 @@ def generate_scenario(main_directory, scenario_shapefile, city_center, radius, v
 
 
 if __name__ == "__main__":
+    random.seed(42)
+
     parser = argparse.ArgumentParser(description='Generate scenario map.')
     parser.add_argument("--generate_veh",
                         type=int,
