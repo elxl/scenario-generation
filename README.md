@@ -85,8 +85,10 @@ This will generate the scenario and save it in the `./data_manhattan_arc` direct
 python scenario_nyc_tlc_manhattan.py --data_path {data_path} --zone_path {zone_path} --date {date} --directory ./data_manhattan_zone --granularity zone
 ```
 This will generate the scenario and save it in the `./data_manhattan_zone` directory. The generated files include:
-- `map/times.pickle`: A pickle file containing the travel time dictionary between zones. The dictionary keys are the zone ID pairs and the values are the travel times between zones. The travel time are calculated using the shortest path between the centroids of the zones.
-- `request/requests.csv`: A CSV file containing the trip data, including origin zone ID, origin zone centroid longitude, origin zone centroid latitude, destination zone ID, destination zone centroid longitude, destination zone centroid latitude, and request time.
+- `map/nodes.csv`: A CSV file containing the node data, including zone ID, zone centroid latitude, and zone centroid longitude. The node IDs are the zone IDs.
+- `map/times.pickle`: A pickle file containing the travel time dictionary between zones. The dictionary keys are the zone ID pairs and the values are the travel times between zones. The travel time are calculated using the shortest road network path between the centroids of the zones.
+- `request/requests.csv`: A CSV file containing the trip data, including origin zone ID, destination zone ID, and request time.
+- `vehicle/vehicles.csv`: A CSV file containing the vehicle data, including vehicle ID, zone ID, start_time, and capacity. Start time is set to 00:00:00 for all vehicles. The vehicle data is generated randomly within the region set of on the generated map.
 
 ## Public trip datasets
 The following is a non-exhaustive list of the most up-to-date public ride-hailing trip datasets that can be used to generate realistic scenarios for different cities:

@@ -99,6 +99,11 @@ def process_trip_zone(data_path, zone_path, date, directory, generate_veh, vehic
     ids = manhattan_zone['LocationID'].to_list()
     centroid_nodes = ox.distance.nearest_nodes(G, X=[c.x for c in centroids], Y=[c.y for c in centroids])
 
+    # Format zone centroid nodes
+    lats = [G.nodes[c].y for c in centroid_nodes]
+    lons = [G.nodes[c].x for c in centroid_nodes]
+    zones = pd.DataFrame({'zone': ids, 'centroid_lat': lats, 'centroid_lon': lons})
+
     # Compute pairewise drive time using Dijkstra
     G = ox.add_edge_speeds(G)
     G = ox.add_edge_travel_times(G)
@@ -116,11 +121,12 @@ def process_trip_zone(data_path, zone_path, date, directory, generate_veh, vehic
                     drive_time_dict[(i, j)] = round(t / 60,2)  # convert to minutes
                 except nx.NetworkXNoPath:
                     continue  # no route
-    time_directory = directory + "map/"
-    create_directory(time_directory)
-    with open(time_directory + 'times.pickle', 'wb') as f:
+    map_directory = directory + "map/"
+    create_directory(map_directory)
+    zones.to_csv(map_directory + 'nodes.csv', index=False)
+    with open(map_directory + 'times.pickle', 'wb') as f:
         pickle.dump(drive_time_dict, f)
-    print(f"Inter-regional drive time matrix saved to {time_directory}times.pickle")
+    print(f"Map saved to {map_directory}")
 
     # Process the trip data within Manhattan area of the specified date
     trips = pd.read_parquet(data_path)
