@@ -97,6 +97,7 @@ The following is a non-exhaustive list of the most up-to-date public ride-hailin
 - [Chicago rideshare dataset](https://data.cityofchicago.org/Transportation/Transportation-Network-Providers-Trips-2023-2024-/n26f-ihde/about_data): A dataset containing trip records for rideshare companies in Chicago from 2023. Data in the same format as the Chicago taxi dataset.
 - [Washington DC taxi dataset](https://opendata.dc.gov/search?q=taxi%20trips): Datasets containing trip records for taxis in Washington DC from 2016. The trip start and end times are rounded to the nearest 1 hour.
 - [Boston rideshare dataset](https://www.kaggle.com/datasets/brllrb/uber-and-lyft-dataset-boston-ma): A dataset containing trip records for ride-hailing trips for 17 days in November and December, 2018 in Boston. The origin and destination are in one of the 12 important locations in Boston.
+- [Shenzhen electric taxi dataset](https://guangwang.me/#/data): Electric Taxi GPS samples for 664 electric taxis during one day. The data includes vehicle id, longitude, latitude, time, speed.
 
 **Note**: There are other datasets avaiable, but they are either out dated, not actively  maintained, or difficult to customize outside the scope of a particular simulator. This list is under active development and will be updated as new datasets become available.
 
